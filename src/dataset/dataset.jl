@@ -19,8 +19,9 @@ function generate_dataset(
     @assert all(min_condition .<= max_condition)
     @assert all(min_decision .<= max_decision)
     f = target_function
-    conditions = sample_from_bounds(N, min_condition, max_condition, seed)
-    decisions = sample_from_bounds(N, min_decision, max_decision, seed)
+    Random.seed!(seed)
+    conditions = sample_from_bounds(N, min_condition, max_condition)
+    decisions = sample_from_bounds(N, min_decision, max_decision)
     costs = Vector(undef, N)
     p = Progress(N, "Generating dataset...")
     Threads.@threads for i in 1:N
@@ -126,12 +127,12 @@ function split_data3(dataset, ratio1, ratio2; seed=2022)
 end
 
 
-function sample_from_bounds(N, min_value, max_value, seed)
+function sample_from_bounds(N, min_value, max_value)
     samples = []
     for i in 1:N
         sampled_value = (
             min_value
-            + (max_value - min_value) .* rand(Xoshiro(seed), size(min_value)...)
+            + (max_value - min_value) .* rand(size(min_value)...)
         )
         push!(samples, sampled_value)
     end

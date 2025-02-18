@@ -11,17 +11,17 @@ act = Flux.leakyrelu
 i_max = 20
 T = 1.0
 # dataset
-min_condition = -2*ones(n)
-max_condition = +2*ones(n)
-min_decision = -2*ones(m)
-max_decision = +2*ones(m)
+min_condition = -1*ones(n)
+max_condition = +1*ones(n)
+min_decision = -1*ones(m)
+max_decision = +1*ones(m)
 
 
 function composite_loss(pred, f)
-    # tmp = max.(0, pred .- f)
-    l = Flux.Losses.mse(pred, f)
-    error("Fix it; loss seems weird")
-    # l += Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
+    tmp = max.(0, pred .- f)
+    l = 0.0
+    l += Flux.Losses.mse(pred, f)
+    l += 100*Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
     return l
 end
 
@@ -58,22 +58,22 @@ function main(epochs=2)
     for (name, model) in networks
         trainer = SupervisedLearningTrainer(
             dataset, model;
-            # loss=composite_loss,
+            loss=composite_loss,
             optimiser=Flux.Adam(1e-3),
         )
 
         function callback()
             c_plot = range(min_condition[1], stop=max_condition[1]; length=100)
             d_plot = range(min_decision[1], stop=max_decision[1]; length=100)
-            fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface)
-            plot!(c_plot, d_plot, (c, d) -> plse([c], [d])[1]; st=:surface)
+            fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface, alpha=0.5)
+            plot!(c_plot, d_plot, (c, d) -> plse([c], [d])[1]; st=:surface, alpha=0.5)
             display(fig)
         end
         Flux.train!(
             trainer;
             batchsize=16,
-            epochs=100,
-            # callback,
+            epochs=50,
+            callback,
         )
     end
 end

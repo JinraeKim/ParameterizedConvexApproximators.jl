@@ -45,6 +45,7 @@ function Flux.train!(
         batchsize=16,
         epochs=200,
         rng=MersenneTwister(0),
+        callback=nothing,
     )
     (; network, dataset, loss, optimiser) = trainer
     data_train = Flux.DataLoader(
@@ -67,6 +68,9 @@ function Flux.train!(
     best_network = nothing
     for epoch in 0:epochs
         if epoch != 0
+            if !isnothing(callback)
+                callback()
+            end
             loss_train = 0.0
             batch_size = 0
             for (x, u, f) in data_train
