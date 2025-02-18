@@ -27,18 +27,7 @@ end
 
 
 function main(epochs=2)
-    plse = PLSE(n, m, i_max, T, h_array, act)
-    # eplse = EPLSE(
-    #               PLSE(n, m, i_max, T, h_array, act),
-    #               FNN(n, m, h_array, act),
-    #               min_decision,
-    #               max_decision,
-    #              )
-
-    networks = Dict(
-                    :PLSE => plse,
-                    # :EPLSE => eplse,
-                   )
+    model = PLSE(n, m, i_max, T, h_array, act)
 
     target_function = example_target_function(:quadratic_sin_sum)
     conditions, decisions, costs, metadata = generate_dataset(
@@ -55,25 +44,27 @@ function main(epochs=2)
         ratio1=0.7, ratio2=0.2,
     )
 
-    for (name, model) in networks
-        trainer = SupervisedLearningTrainer(
-            dataset, model;
-            loss=composite_loss,
-            optimiser=Flux.Adam(1e-3),
-        )
+    trainer = SupervisedLearningTrainer(
+        dataset, model;
+        loss=composite_loss,
+        optimiser=Flux.Adam(1e-3),
+    )
 
-        function callback()
-            c_plot = range(min_condition[1], stop=max_condition[1]; length=100)
-            d_plot = range(min_decision[1], stop=max_decision[1]; length=100)
-            fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface, alpha=0.5)
-            plot!(c_plot, d_plot, (c, d) -> plse([c], [d])[1]; st=:surface, alpha=0.5)
-            display(fig)
-        end
-        Flux.train!(
-            trainer;
-            batchsize=16,
-            epochs=50,
-            callback,
-        )
+    anim=Animation()
+
+    function callback()
+        c_plot = range(min_condition[1], stop=max_condition[1]; length=100)
+        d_plot = range(min_decision[1], stop=max_decision[1]; length=100)
+        fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface, alpha=0.5)
+        plot!(c_plot, d_plot, (c, d) -> model([c], [d])[1]; st=:surface, alpha=0.5)
+        display(fig)
+        frame(anim)
     end
+    Flux.train!(
+        trainer;
+        batchsize=16,
+        epochs=50,
+        callback,
+    )
+    gif(anim, "plse_with_composite_loss.gif", fps=10)
 end
