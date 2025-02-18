@@ -130,8 +130,8 @@ function sample_from_bounds(N, min_value, max_value, seed)
     samples = []
     for i in 1:N
         sampled_value = (
-             min_value
-             + (max_value - min_value) .* rand(size(min_value)...)
+            min_value
+            + (max_value - min_value) .* rand(Xoshiro(seed), size(min_value)...)
         )
         push!(samples, sampled_value)
     end
