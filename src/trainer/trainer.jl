@@ -20,7 +20,7 @@ end
 
 
 function retrieve_normalised_network(network::AbstractApproximator, dataset::DecisionMakingDataset, normalisation)
-    if normalisation == nothing
+    if isnothing(normalisation)
         normalised_network = network
     elseif normalisation == :max_abs
         normalised_network = MaxAbsNormalisedApproximator(network, dataset)
@@ -69,7 +69,7 @@ function Flux.train!(
     for epoch in 0:epochs
         if epoch != 0
             if !isnothing(callback)
-                callback()
+                callback(epoch)
             end
             loss_train = 0.0
             batch_size = 0
@@ -104,8 +104,10 @@ function Flux.train!(
             best_network = deepcopy(network)
         end
     end
+    loss_test = get_loss(trainer.network, trainer.dataset[:test], trainer.loss)
     info = Dict()
     info["train_loss"] = losses_train
     info["valid_loss"] = losses_validate
+    info["test_loss"] = loss_test
     return best_network, info
 end
