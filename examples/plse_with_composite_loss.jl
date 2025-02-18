@@ -11,15 +11,17 @@ act = Flux.leakyrelu
 i_max = 20
 T = 1.0
 # dataset
-min_condition = -ones(n)
-max_condition = +ones(n)
-min_decision = -ones(m)
-max_decision = +ones(m)
+min_condition = -2*ones(n)
+max_condition = +2*ones(n)
+min_decision = -2*ones(m)
+max_decision = +2*ones(m)
 
 
 function composite_loss(pred, f)
-    tmp = max.(0, pred .- f)
-    l = Flux.Losses.mse(pred, f) + Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
+    # tmp = max.(0, pred .- f)
+    l = Flux.Losses.mse(pred, f)
+    error("Fix it; loss seems weird")
+    # l += Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
     return l
 end
 
@@ -39,7 +41,7 @@ function main(epochs=2)
                    )
 
     target_function = example_target_function(:quadratic_sin_sum)
-    dataset = generate_dataset(
+    conditions, decisions, costs, metadata = generate_dataset(
         target_function;
         N,
         min_condition,
@@ -47,21 +49,31 @@ function main(epochs=2)
         min_decision,
         max_decision,
     )
+    dataset = DecisionMakingDataset(
+        conditions, decisions, costs;
+        metadata, seed=2023,
+        ratio1=0.7, ratio2=0.2,
+    )
+
     for (name, model) in networks
         trainer = SupervisedLearningTrainer(
             dataset, model;
-            loss=composite_loss,
+            # loss=composite_loss,
             optimiser=Flux.Adam(1e-3),
         )
+
+        function callback()
+            c_plot = range(min_condition[1], stop=max_condition[1]; length=100)
+            d_plot = range(min_decision[1], stop=max_decision[1]; length=100)
+            fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface)
+            plot!(c_plot, d_plot, (c, d) -> plse([c], [d])[1]; st=:surface)
+            display(fig)
+        end
         Flux.train!(
             trainer;
             batchsize=16,
-            epochs=200,
+            epochs=100,
+            # callback,
         )
     end
-    c_plot = range(min_condition, stop=max_condition; length=100)
-    d_plot = range(min_decision, stop=max_decision; length=100)
-    fig = plot(c_plot, d_plot, target_function; st=:surface)
-    plot!(c_plot, d_plot, plse; st=:surface)
-    display(fig)
 end
