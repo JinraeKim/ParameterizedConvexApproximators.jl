@@ -13,15 +13,14 @@ function generate_dataset(
         max_condition,
         min_decision,
         max_decision,
-        seed=2023,
+        rng=Random.default_rng(),
         kwargs...,
     )
     @assert all(min_condition .<= max_condition)
     @assert all(min_decision .<= max_decision)
     f = target_function
-    Random.seed!(seed)
-    conditions = sample_from_bounds(N, min_condition, max_condition)
-    decisions = sample_from_bounds(N, min_decision, max_decision)
+    conditions = sample_from_bounds(N, min_condition, max_condition; rng)
+    decisions = sample_from_bounds(N, min_decision, max_decision; rng)
     costs = Vector(undef, N)
     p = Progress(N, "Generating dataset...")
     Threads.@threads for i in 1:N
@@ -48,15 +47,14 @@ function DecisionMakingDataset(
         conditions, decisions, costs;
         metadata=(;),  # prior metadata
         name=nothing,
-        seed=2023,
         ratio1=0.7, ratio2=0.2,
+        rng=Ramdom.default_rng(),
     )
     N = length(conditions)
     @assert length(decisions) == N
     @assert length(costs) == N
     # split indicies
-    Random.seed!(seed)
-    train_idx, validate_idx, test_idx = split_data3(collect(1:N), ratio1, ratio2)
+    train_idx, validate_idx, test_idx = split_data3(collect(1:N), ratio1, ratio2; rng)
     # get data
     metadata = (;
                 metadata...,
@@ -95,16 +93,15 @@ end
 
 
 """
-    split_data2(dataset, ratio)
+    split_data2(dataset, ratio; rng)
 
 Split a dataset into train and test datasets (array).
 """
-function split_data2(dataset, ratio; seed=2022)
-    Random.seed!(seed)
+function split_data2(dataset, ratio; rng=Random.default_rng())
     @assert ratio >= 0.0
     @assert ratio <= 1.0
     n = length(dataset)
-    idx = Random.shuffle(1:n)
+    idx = Random.shuffle(rng, 1:n)
     train_idx = view(idx, 1:floor(Int, ratio*n))
     test_idx = view(idx, (floor(Int, ratio*n)+1):n)
     dataset[train_idx], dataset[test_idx]
@@ -112,27 +109,26 @@ end
 
 
 """
-    split_data3(dataset, ratio1, ratio2)
+    split_data3(dataset, ratio1, ratio2; rng)
 
 Split a dataset into train, validate, and test datasets (array).
 """
-function split_data3(dataset, ratio1, ratio2; seed=2022)
-    Random.seed!(seed)
+function split_data3(dataset, ratio1, ratio2; rng=Random.default_rng())
     @assert ratio1 >= 0.0
     @assert ratio2 >= 0.0
     @assert ratio1 + ratio2 <= 1.0
-    dataset_train, dataset_valtest = split_data2(dataset, ratio1)
-    dataset_validate, dataset_test = split_data2(dataset_valtest, ratio2/(1.0-ratio1))
+    dataset_train, dataset_valtest = split_data2(dataset, ratio1; rng)
+    dataset_validate, dataset_test = split_data2(dataset_valtest, ratio2/(1.0-ratio1); rng)
     return dataset_train, dataset_validate, dataset_test
 end
 
 
-function sample_from_bounds(N, min_value, max_value)
+function sample_from_bounds(N, min_value, max_value; rng=Random.default_rng())
     samples = []
     for i in 1:N
         sampled_value = (
             min_value
-            + (max_value - min_value) .* rand(size(min_value)...)
+            + (max_value - min_value) .* rand(rng, size(min_value)...)
         )
         push!(samples, sampled_value)
     end

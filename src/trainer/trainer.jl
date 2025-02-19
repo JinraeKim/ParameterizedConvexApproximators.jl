@@ -73,7 +73,7 @@ function Flux.train!(
             end
             loss_train = 0.0
             batch_size = 0
-            for (x, u, f) in data_train
+            @showprogress for (x, u, f) in data_train
                 val, grads = Flux.withgradient(network) do _network
                     pred = _network(x, u)
                     loss(pred, f)

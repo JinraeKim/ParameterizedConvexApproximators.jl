@@ -1,6 +1,7 @@
 using ParametrisedConvexApproximators
 using Flux
 using Plots
+using Random
 
 
 seed = 2022
@@ -47,13 +48,13 @@ function main(epochs=2)
         max_condition,
         min_decision,
         max_decision,
+        rng=Xoshiro(1),
     )
     dataset = DecisionMakingDataset(
         conditions, decisions, costs;
-        metadata, seed=2023,
+        metadata, rng=Xoshiro(2),
         ratio1=0.7, ratio2=0.2,
     )
-
     trainer = SupervisedLearningTrainer(
         dataset, model;
         loss=composite_loss,
