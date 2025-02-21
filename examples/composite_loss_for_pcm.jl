@@ -2,6 +2,7 @@ using ParametrisedConvexApproximators
 using Flux
 using Plots
 using Random
+using ParameterSchedulers
 
 
 seed = 2022
@@ -12,10 +13,10 @@ act = Flux.leakyrelu
 i_max = 20
 T = 1.0
 # dataset
-min_condition = -1*ones(n)
-max_condition = +1*ones(n)
-min_decision = -1*ones(m)
-max_decision = +1*ones(m)
+min_condition = -1 * ones(n)
+max_condition = +1 * ones(n)
+min_decision = -1 * ones(m)
+max_decision = +1 * ones(m)
 
 
 function loss_mse(pred, f)
@@ -25,7 +26,8 @@ end
 
 function loss_minorant(pred, f)
     tmp = max.(0, pred .- f)
-    l = 100*Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
+    # tmp = act.(pred .- f)
+    l = 1000 * Flux.Losses.mae(tmp, zeros(size(tmp)))  # the last term is for pred >= f
     return l
 end
 
@@ -58,7 +60,8 @@ function main(epochs=2)
     trainer = SupervisedLearningTrainer(
         dataset, model;
         loss=composite_loss,
-        optimiser=Flux.Adam(3e-4),
+        optimiser=Flux.Adam(1e-3),
+        scheduler=ParameterSchedulers.Exp(start=1e-3, decay=0.99),
     )
 
     anim = Animation()
@@ -68,16 +71,17 @@ function main(epochs=2)
         @show get_loss(model, dataset[:test], loss_minorant)
         c_plot = range(min_condition[1], stop=max_condition[1]; length=100)
         d_plot = range(min_decision[1], stop=max_decision[1]; length=100)
-        fig = plot(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface, alpha=0.5)
+        fig = plot(; xlabel="c", ylabel="d")
+        plot!(c_plot, d_plot, (c, d) -> target_function([c], [d]); st=:surface, alpha=0.5)
         plot!(c_plot, d_plot, (c, d) -> model([c], [d])[1]; st=:surface, alpha=0.5)
-        frame(anim)
+        # frame(anim)
         display(fig)
     end
     Flux.train!(
         trainer;
         batchsize=16,
-        epochs=25,
+        epochs=200,
         callback,
     )
-    gif(anim, "composite_loss_for_pcm.gif", fps=10)
+    # gif(anim, "composite_loss_for_pcm.gif", fps=10)
 end

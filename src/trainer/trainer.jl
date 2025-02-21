@@ -6,15 +6,17 @@ struct SupervisedLearningTrainer <: AbstractTrainer
     dataset::DecisionMakingDataset
     loss
     optimiser
+    scheduler
     function SupervisedLearningTrainer(
         dataset, network;
         normalisation=nothing,
         loss=Flux.Losses.mse,
         optimiser=Flux.Adam(1e-3),
+        scheduler=nothing,
     )
         network = retrieve_normalised_network(network, dataset, normalisation)
         @assert dataset.split == :full
-        new(network, dataset, loss, optimiser)
+        new(network, dataset, loss, optimiser, scheduler)
     end
 end
 
@@ -41,23 +43,23 @@ end
 
 
 function Flux.train!(
-        trainer::SupervisedLearningTrainer;
-        batchsize=16,
-        epochs=200,
-        rng=MersenneTwister(0),
-        callback=nothing,
-    )
-    (; network, dataset, loss, optimiser) = trainer
+    trainer::SupervisedLearningTrainer;
+    batchsize=16,
+    epochs=200,
+    rng=Random.default_rng(),
+    callback=nothing,
+)
+    (; network, dataset, loss, optimiser, scheduler) = trainer
     data_train = Flux.DataLoader(
-                                 (
-                                  hcat(dataset[:train].conditions...),
-                                  hcat(dataset[:train].decisions...),
-                                  hcat(dataset[:train].costs...),
-                                 );
-                                 batchsize=batchsize,
-                                 shuffle=true,
-                                 rng=rng,
-                                )
+        (
+            hcat(dataset[:train].conditions...),
+            hcat(dataset[:train].decisions...),
+            hcat(dataset[:train].costs...),
+        );
+        batchsize=batchsize,
+        shuffle=true,
+        rng=rng,
+    )
     opt_state = Flux.setup(optimiser, network)
 
     losses_train = []
@@ -66,8 +68,12 @@ function Flux.train!(
     loss_validate = nothing
     minimum_loss_validate = Inf
     best_network = nothing
-    for epoch in 0:epochs
+    if isnothing(scheduler)
+        scheduler = [optimiser.eta for _ in 0:epochs]
+    end
+    for (eta, epoch) in zip(scheduler, 0:epochs)
         if epoch != 0
+            Flux.Optimisers.adjust!(opt_state, eta)
             if !isnothing(callback)
                 callback(epoch)
             end
@@ -84,7 +90,7 @@ function Flux.train!(
                     # This will give an warning
                     # https://github.com/gdalle/ImplicitDifferentiation.jl/issues/92
                     # https://discourse.julialang.org/t/julia-nan-check-for-namedtuple/102583/4?u=ihany
-                    Flux.update!(opt_state, network, grads[1])
+                    opt_state, network = Flux.update!(opt_state, network, grads[1])
                 end
                 if typeof(network) == PICNN  # TODO: an automated solution required
                     project_nonnegative!(network)
@@ -97,7 +103,7 @@ function Flux.train!(
         push!(losses_train, loss_train)
         loss_validate = get_loss(trainer.network, trainer.dataset[:validate], trainer.loss)
         push!(losses_validate, loss_validate)
-        println("epoch: $(epoch)/$(epochs), train loss: $(Printf.@sprintf("%.4e", loss_train)), valid loss: $(Printf.@sprintf("%.4e", loss_validate))")
+        println("epoch: $(epoch)/$(epochs), train loss: $(Printf.@sprintf("%.4e", loss_train)), valid loss: $(Printf.@sprintf("%.4e", loss_validate)) (learning rate: $(eta))")
         if loss_validate < minimum_loss_validate
             println("Best network found!")
             minimum_loss_validate = loss_validate
