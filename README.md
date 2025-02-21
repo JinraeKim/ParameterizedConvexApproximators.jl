@@ -169,20 +169,20 @@ See `./examples/visualization.jl`.
 - See [^1].
 - **NOTICE**: the following illustration does not show the training progress.
 
-<img src=./anim_ma.gif width=50% height=50%>
+<img src=./figures/anim_ma.gif width=50% height=50%>
 
 #### PMA network construction in theory
 - The following illustration shows the construction of PMA network for given parameterized convex function.
 - See [^3], Theorem 3.
 - **NOTICE**: the following illustration does not show the training progress.
 
-<img src=./anim_pma.gif width=50% height=50%>
+<img src=./figures/anim_pma.gif width=50% height=50%>
 
 #### PLSE construction in theory
 - The following illustration shows the PLSE network with different temperature for the corresponding PMA network constructed above.
 - See [^3], Corollary 1.
 
-<img src=./anim_plse.gif width=50% height=50%>
+<img src=./figures/anim_plse.gif width=50% height=50%>
 
 
 ### Comparison between MA and PMA networks
@@ -190,7 +190,7 @@ See `./examples/visualization.jl`.
 - To construct an MA network[^1],
 any subgradient can arbitrarily be selected.
 
-<img src=./anim_ma_subgrad.gif width=50% height=50%>
+<img src=./figures/anim_ma_subgrad.gif width=50% height=50%>
 
 #### Subgradient function selection in PMA network
 - To construct an PMA network[^1],
@@ -199,7 +199,7 @@ should carefully be considered so that it can be continuous and represent (appro
 the subgradient function well.
     - As shown in the following, the subgradient function may be multivalued.
 
-<img src=./anim_pma_subgrad.gif width=50% height=50%>
+<img src=./figures/anim_pma_subgrad.gif width=50% height=50%>
 
 The subgradient function can be approximated by a continuous approximate selection.
 
@@ -208,7 +208,7 @@ The subgradient function can be approximated by a continuous approximate selecti
 a single-valued function $g: X \to Y$ is said to be a *continuous approximate selection*
 if $\textup{Graph}(g) \subset \textup{Graph}(B(f, \epsilon))$.
     - The following figure adopts $L_{1}$-norm for illustration.
-<img src=./continuous_approximate_selection.png width=50% height=50%>
+<img src=./figures/continuous_approximate_selection.png width=50% height=50%>
 
 
 ## References
