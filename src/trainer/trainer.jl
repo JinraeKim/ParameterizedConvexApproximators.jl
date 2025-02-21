@@ -69,10 +69,13 @@ function Flux.train!(
     minimum_loss_validate = Inf
     best_network = nothing
     if isnothing(scheduler)
-        scheduler = [optimiser.eta for _ in 0:epochs]
+        scheduler = [optimiser.eta for _ in 1:epochs]
     end
-    for (eta, epoch) in zip(scheduler, 0:epochs)
+    scheduler = Iterators.Stateful(scheduler)
+    eta = nothing
+    for epoch in 0:epochs
         if epoch != 0
+            eta, _ = iterate(scheduler)
             Flux.Optimisers.adjust!(opt_state, eta)
             if !isnothing(callback)
                 callback(epoch)
